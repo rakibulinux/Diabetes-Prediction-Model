@@ -137,12 +137,16 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Get first image tag (lowercased by metadata action)
+        id: get-tag
+        run: echo "ref=$(echo '${{ steps.meta.outputs.tags }}' | head -1)" >> $GITHUB_OUTPUT
+
       - name: Scan image for vulnerabilities
         if: success()
         id: scan
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          image-ref: ${{ steps.get-tag.outputs.ref }}
           format: sarif
           output: trivy-results.sarif
           severity: HIGH,CRITICAL
