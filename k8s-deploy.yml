@@ -36,7 +36,7 @@ spec:
     spec:
       containers:
         - name: diabetes-api
-          image: rakibulinux/diabetes-api:latest
+          image: ghcr.io/rakibulinux/diabetes-prediction-model/diabetes-api:34ed8e6
           ports:
             - containerPort: 8000
           imagePullPolicy: Always
