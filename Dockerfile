@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM python:3.10-slim AS builder
+FROM python:3.14-slim AS builder
 
 WORKDIR /app
 COPY requirements/ requirements/
@@ -9,7 +9,7 @@ COPY . .
 RUN python train.py
 
 
-FROM python:3.10-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 WORKDIR /app
 
