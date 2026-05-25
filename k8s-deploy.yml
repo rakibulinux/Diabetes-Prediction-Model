@@ -1,11 +1,31 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mlops
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: diabetes-api-config
+  namespace: mlops
+data:
+  MODEL_PATH: "diabetes_model.pkl"
+  LOG_LEVEL: "INFO"
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: diabetes-api
+  namespace: mlops
   labels:
     app: diabetes-api
 spec:
   replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: diabetes-api
@@ -15,16 +35,39 @@ spec:
         app: diabetes-api
     spec:
       containers:
-      - name: diabetes-api
-        image: your-dockerhub-username/diabetes-api:latest
-        ports:
-        - containerPort: 8000
-        imagePullPolicy: Always
+        - name: diabetes-api
+          image: rakibulinux/diabetes-api:latest
+          ports:
+            - containerPort: 8000
+          imagePullPolicy: Always
+          envFrom:
+            - configMapRef:
+                name: diabetes-api-config
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: diabetes-api-service
+  namespace: mlops
 spec:
   selector:
     app: diabetes-api
@@ -33,3 +76,23 @@ spec:
       port: 80
       targetPort: 8000
   type: LoadBalancer
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: diabetes-api-hpa
+  namespace: mlops
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: diabetes-api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
